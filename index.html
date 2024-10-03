@@ -3,84 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload et conversion en WebP</title>
+    <title>Convertir une image en WebP</title>
 </head>
 <body>
     <h1>Uploader une image pour la convertir en WebP</h1>
 
-    <?php
-    function resize_and_convert_to_webp($source_file, $output_file, $max_size_kb = 200) {
-        // Charger l'image selon le format
-        $info = getimagesize($source_file);
-        $mime = $info['mime'];
-
-        switch ($mime) {
-            case 'image/jpeg':
-                $image = imagecreatefromjpeg($source_file);
-                break;
-            case 'image/png':
-                $image = imagecreatefrompng($source_file);
-                break;
-            case 'image/gif':
-                $image = imagecreatefromgif($source_file);
-                break;
-            default:
-                die("Format d'image non supporté.");
-        }
-
-        // Commencer avec une qualité élevée
-        $quality = 95;
-        $output_temp = $output_file . '.webp';
-
-        // Sauvegarder l'image WebP et ajuster la qualité pour être sous 200 Ko
-        imagewebp($image, $output_temp, $quality);
-        while (filesize($output_temp) > $max_size_kb * 1024 && $quality > 10) {
-            $quality -= 5;
-            imagewebp($image, $output_temp, $quality);
-        }
-
-        imagedestroy($image);
-        return $output_temp;
-    }
-
-    // Si le formulaire est soumis
-    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-        // Vérifier si un fichier est uploadé
-        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-            $upload_dir = 'uploads/';
-            if (!is_dir($upload_dir)) {
-                mkdir($upload_dir, 0777, true);
-            }
-
-            $file_tmp = $_FILES['image']['tmp_name'];
-            $file_name = pathinfo($_FILES['image']['name'], PATHINFO_FILENAME);
-            $output_file = $upload_dir . $file_name;
-
-            // Convertir et redimensionner
-            $converted_file = resize_and_convert_to_webp($file_tmp, $output_file);
-
-            // Télécharger le fichier une fois converti
-            header('Content-Description: File Transfer');
-            header('Content-Type: application/octet-stream');
-            header('Content-Disposition: attachment; filename="' . basename($converted_file) . '"');
-            header('Content-Length: ' . filesize($converted_file));
-            readfile($converted_file);
-
-            // Supprimer le fichier temporaire du serveur
-            unlink($converted_file);
-            exit; // Arrêter l'exécution après le téléchargement
-        } else {
-            echo "<p style='color:red;'>Erreur lors de l'upload de l'image.</p>";
-        }
-    }
-    ?>
-
     <!-- Formulaire d'upload -->
-    <form action="" method="POST" enctype="multipart/form-data">
-        <input type="file" name="image" accept="image/*" required>
-        <button type="submit">Convertir</button>
-    </form>
+    <input type="file" id="imageInput" accept="image/*" required>
+    <button id="convertBtn">Convertir en WebP</button>
+    <br><br>
+
+    <!-- Zone de prévisualisation -->
+    <img id="preview" style="max-width: 300px; display: none;" alt="Prévisualisation de l'image">
+    <br>
+
+    <!-- Lien pour télécharger l'image convertie -->
+    <a id="downloadLink" style="display:none;" download="image.webp">Télécharger l'image convertie</a>
+
+    <script>
+        document.getElementById('convertBtn').addEventListener('click', function () {
+            const input = document.getElementById('imageInput');
+            const preview = document.getElementById('preview');
+            const downloadLink = document.getElementById('downloadLink');
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        // Redimensionner l'image à la taille d'origine
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+
+                        // Convertir en WebP
+                        canvas.toBlob(function (blob) {
+                            // Créer un objet URL pour le téléchargement
+                            const url = URL.createObjectURL(blob);
+                            
+                            // Afficher l'image convertie dans l'élément <img>
+                            preview.src = url;
+                            preview.style.display = 'block';
+
+                            // Activer le lien de téléchargement
+                            downloadLink.href = url;
+                            downloadLink.style.display = 'inline';
+                        }, 'image/webp', 0.8); // Qualité de compression (0 à 1)
+                    };
+                };
+
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
 
 </body>
 </html>
-
