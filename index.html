@@ -3,63 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Convertir une image en WebP</title>
+    <title>Convertir plusieurs images en WebP</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script> <!-- Bibliothèque JSZip -->
 </head>
 <body>
-    <h1>Uploader une image pour la convertir en WebP</h1>
+    <h1>Uploader des images pour les convertir en WebP</h1>
 
-    <!-- Formulaire d'upload -->
-    <input type="file" id="imageInput" accept="image/*" required>
+    <!-- Formulaire d'upload multiple -->
+    <input type="file" id="imageInput" accept="image/*" multiple required>
     <button id="convertBtn">Convertir en WebP</button>
     <br><br>
 
     <!-- Zone de prévisualisation -->
-    <img id="preview" style="max-width: 300px; display: none;" alt="Prévisualisation de l'image">
+    <div id="previewContainer"></div>
     <br>
 
-    <!-- Lien pour télécharger l'image convertie -->
-    <a id="downloadLink" style="display:none;" download="image.webp">Télécharger l'image convertie</a>
+    <!-- Lien pour télécharger le ZIP -->
+    <a id="downloadLink" style="display:none;" download="images_webp.zip">Télécharger toutes les images converties</a>
 
     <script>
         document.getElementById('convertBtn').addEventListener('click', function () {
             const input = document.getElementById('imageInput');
-            const preview = document.getElementById('preview');
+            const previewContainer = document.getElementById('previewContainer');
             const downloadLink = document.getElementById('downloadLink');
+            const zip = new JSZip();
+            previewContainer.innerHTML = ''; // Réinitialiser l'aperçu
 
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                const reader = new FileReader();
+            if (input.files && input.files.length > 0) {
+                Array.from(input.files).forEach((file, index) => {
+                    const reader = new FileReader();
 
-                reader.onload = function (e) {
-                    const img = new Image();
-                    img.src = e.target.result;
+                    reader.onload = function (e) {
+                        const img = new Image();
+                        img.src = e.target.result;
 
-                    img.onload = function () {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
+                        img.onload = function () {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
 
-                        // Redimensionner l'image à la taille d'origine
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        ctx.drawImage(img, 0, 0);
+                            // Redimensionner l'image à la taille d'origine
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            ctx.drawImage(img, 0, 0);
 
-                        // Convertir en WebP
-                        canvas.toBlob(function (blob) {
-                            // Créer un objet URL pour le téléchargement
-                            const url = URL.createObjectURL(blob);
-                            
-                            // Afficher l'image convertie dans l'élément <img>
-                            preview.src = url;
-                            preview.style.display = 'block';
+                            // Convertir en WebP
+                            canvas.toBlob(function (blob) {
+                                // Ajouter l'image WebP convertie dans le ZIP
+                                const fileName = file.name.split('.').slice(0, -1).join('.') + '.webp';
+                                zip.file(fileName, blob);
 
-                            // Activer le lien de téléchargement
-                            downloadLink.href = url;
-                            downloadLink.style.display = 'inline';
-                        }, 'image/webp', 0.8); // Qualité de compression (0 à 1)
+                                // Ajouter une prévisualisation
+                                const imgPreview = document.createElement('img');
+                                imgPreview.src = URL.createObjectURL(blob);
+                                imgPreview.style.maxWidth = '100px';
+                                imgPreview.style.margin = '5px';
+                                previewContainer.appendChild(imgPreview);
+
+                                // Une fois toutes les images traitées, permettre le téléchargement du ZIP
+                                if (index === input.files.length - 1) {
+                                    zip.generateAsync({ type: 'blob' }).then(function (content) {
+                                        const url = URL.createObjectURL(content);
+                                        downloadLink.href = url;
+                                        downloadLink.style.display = 'inline';
+                                    });
+                                }
+                            }, 'image/webp', 0.8); // Qualité de compression (0 à 1)
+                        };
                     };
-                };
 
-                reader.readAsDataURL(file);
+                    reader.readAsDataURL(file);
+                });
             }
         });
     </script>
