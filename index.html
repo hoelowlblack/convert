@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload et conversion en WebP</title>
+</head>
+<body>
+    <h1>Uploader une image pour la convertir en WebP</h1>
+    <form action="convert.php" method="POST" enctype="multipart/form-data">
+        <input type="file" name="image" accept="image/*" required>
+        <button type="submit">Convertir</button>
+    </form>
+</body>
+</html>
